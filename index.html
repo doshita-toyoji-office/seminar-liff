@@ -1,0 +1,235 @@
+<!--
+  ⚠ 本番の正本は「このファイル」。GitHub Pages（公開リポジトリ）に置いて使う。
+  （Supabaseは supabase.co 上でHTMLを text/plain 固定にする制約があるため、関数・Storageともに不可）
+  GitHubに index.html としてアップロード → Settings → Pages を有効化。
+  公開URL例: https://<owner>.github.io/seminar-liff/
+  ※ serve-seminar-liff エッジ関数・seminar Storageバケットは不要（削除可）。
+  下の LIFF_ID / RSVP_ENDPOINT は設定済み。
+-->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>参加申込｜KOBE KITA イノベーションセミナー2026</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    :root {
+      --ink: #0a0a32;
+      --ink-soft: #5b5f86;
+      --bus: #00843d;
+      --bus-dark: #006830;
+      --bus-pale: #f0faf3;
+      --line: #c5d9cc;
+      --paper: #f6f8f7;
+      --err: #c0392b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", system-ui, sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 480px; margin: 0 auto; padding: 16px 16px 48px; }
+    header {
+      background: linear-gradient(135deg, var(--bus) 0%, var(--bus-dark) 100%);
+      color: #fff;
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-bottom: 16px;
+    }
+    header h1 { font-size: 16px; margin: 0 0 6px; line-height: 1.4; }
+    header p { font-size: 13px; margin: 0; opacity: 0.95; }
+    .field { margin-bottom: 16px; }
+    label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+    label .req { color: var(--err); font-size: 12px; margin-left: 4px; }
+    label .opt { color: var(--ink-soft); font-size: 12px; font-weight: 500; margin-left: 4px; }
+    input[type="text"], input[type="tel"], input[type="email"], input[type="number"], select {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      border: 1.5px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+    }
+    input:focus, select:focus { outline: none; border-color: var(--bus); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .contact-group { display: grid; grid-template-columns: 100px 1fr; gap: 10px; }
+    .consent {
+      display: flex; align-items: flex-start; gap: 10px;
+      background: var(--bus-pale); border: 1px solid var(--line);
+      border-radius: 8px; padding: 12px; font-size: 12.5px; color: var(--ink-soft);
+    }
+    .consent input { margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0; }
+    button {
+      width: 100%; padding: 15px; font-size: 16px; font-weight: 700;
+      color: #fff; background: var(--bus); border: none; border-radius: 10px;
+      margin-top: 8px; cursor: pointer;
+    }
+    button:disabled { background: #9bbfa9; cursor: not-allowed; }
+    .msg { font-size: 13px; margin-top: 12px; padding: 12px; border-radius: 8px; display: none; }
+    .msg.show { display: block; }
+    .msg.ok { background: var(--bus-pale); color: var(--bus-dark); }
+    .msg.ng { background: #fff5f5; color: var(--err); }
+    .done { text-align: center; padding: 32px 16px; display: none; }
+    .done.show { display: block; }
+    .done h2 { color: var(--bus-dark); font-size: 18px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>KOBE KITA イノベーションセミナー2026 参加申込</h1>
+      <p>2026年7月26日（日）10:00〜12:00／北神区文化センター ありまホール</p>
+    </header>
+
+    <form id="form">
+      <div class="field">
+        <label>お名前<span class="req">必須</span></label>
+        <input type="text" id="name" autocomplete="name" required />
+      </div>
+
+      <div class="field">
+        <label>ふりがな<span class="req">必須</span></label>
+        <input type="text" id="kana" required />
+      </div>
+
+      <div class="field">
+        <label>参加人数<span class="req">必須</span></label>
+        <input type="number" id="party_size" value="1" min="1" max="20" required />
+      </div>
+
+      <div class="field">
+        <label>ご連絡先<span class="req">必須</span><span class="opt">（リマインド用）</span></label>
+        <div class="contact-group">
+          <select id="contact_type">
+            <option value="phone">電話</option>
+            <option value="email">メール</option>
+          </select>
+          <input type="text" id="contact_value" inputmode="tel" placeholder="例：090-1234-5678" required />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>ご所属・団体名<span class="opt">任意</span></label>
+        <input type="text" id="org" />
+      </div>
+
+      <div class="field">
+        <label>来場手段<span class="opt">任意</span></label>
+        <select id="transport">
+          <option value="">選択しない</option>
+          <option value="public">公共交通</option>
+          <option value="car">自家用車</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="consent">
+          <input type="checkbox" id="consent" />
+          <span>ご記入の情報は、本セミナーの受付・連絡・当日案内、および主催コンソーシアムからの今後のセミナー・北区の交通に関する中立的な情報提供にのみ使用します。特定の政党・政治家の活動には利用しません。上記に同意します。</span>
+        </label>
+      </div>
+
+      <button type="submit" id="submit">この内容で申し込む</button>
+      <div class="msg" id="msg"></div>
+    </form>
+
+    <div class="done" id="done">
+      <h2>お申込みありがとうございました</h2>
+      <p>受付完了をLINEのトークにお送りしました。<br>前日・当日のリマインドもお送りします。</p>
+    </div>
+  </div>
+
+  <script>
+    // ▼▼ デプロイ前に設定 ▼▼
+    const LIFF_ID = "2010505334-BCSPDpzj";
+    const RSVP_ENDPOINT = "https://yvcoqjmwcaebpmwwgikg.supabase.co/functions/v1/seminar-rsvp";
+    // ▲▲ ここまで ▲▲
+
+    let lineUserId = null;
+
+    (async () => {
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        if (!liff.isLoggedIn()) { liff.login(); return; }
+        const profile = await liff.getProfile();
+        lineUserId = profile.userId;
+      } catch (e) {
+        console.error("LIFF init error", e);
+      }
+    })();
+
+    // 連絡先の入力モードを電話/メールで切替
+    const ctype = document.getElementById("contact_type");
+    const cval = document.getElementById("contact_value");
+    ctype.addEventListener("change", () => {
+      if (ctype.value === "email") {
+        cval.setAttribute("inputmode", "email");
+        cval.placeholder = "例：example@mail.com";
+      } else {
+        cval.setAttribute("inputmode", "tel");
+        cval.placeholder = "例：090-1234-5678";
+      }
+    });
+
+    const form = document.getElementById("form");
+    const msg = document.getElementById("msg");
+    const submitBtn = document.getElementById("submit");
+
+    function showMsg(text, ok) {
+      msg.textContent = text;
+      msg.className = "msg show " + (ok ? "ok" : "ng");
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!document.getElementById("consent").checked) {
+        showMsg("個人情報の利用目的への同意が必要です。", false);
+        return;
+      }
+      submitBtn.disabled = true;
+      submitBtn.textContent = "送信中…";
+
+      const payload = {
+        line_user_id: lineUserId,
+        name: document.getElementById("name").value.trim(),
+        kana: document.getElementById("kana").value.trim(),
+        party_size: parseInt(document.getElementById("party_size").value, 10) || 1,
+        contact_type: ctype.value,
+        contact_value: cval.value.trim(),
+        org: document.getElementById("org").value.trim(),
+        transport: document.getElementById("transport").value,
+        consent: true,
+      };
+
+      try {
+        const res = await fetch(RSVP_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          form.style.display = "none";
+          document.getElementById("done").className = "done show";
+          setTimeout(() => { if (liff.isInClient()) liff.closeWindow(); }, 2500);
+        } else {
+          showMsg("送信に失敗しました（" + (data.error || res.status) + "）。お手数ですが時間をおいて再度お試しください。", false);
+          submitBtn.disabled = false;
+          submitBtn.textContent = "この内容で申し込む";
+        }
+      } catch (err) {
+        showMsg("通信エラーが発生しました。電波の良い場所で再度お試しください。", false);
+        submitBtn.disabled = false;
+        submitBtn.textContent = "この内容で申し込む";
+      }
+    });
+  </script>
+</body>
+</html>
