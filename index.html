@@ -45,6 +45,11 @@
     header h1 { font-size: 16px; margin: 0 0 6px; line-height: 1.4; }
     header p { font-size: 13px; margin: 0; opacity: 0.95; }
     .field { margin-bottom: 16px; }
+    .section-label {
+      font-size: 12px; font-weight: 700; color: var(--ink-soft);
+      margin: 20px 0 10px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--line);
+    }
     label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
     label .req { color: var(--err); font-size: 12px; margin-left: 4px; }
     label .opt { color: var(--ink-soft); font-size: 12px; font-weight: 500; margin-left: 4px; }
@@ -91,12 +96,12 @@
     <form id="form">
       <div class="field">
         <label>お名前<span class="req">必須</span></label>
-        <input type="text" id="name" autocomplete="name" required />
+        <input type="text" id="name" autocomplete="name" required placeholder="例：神戸 太郎" />
       </div>
 
       <div class="field">
         <label>ふりがな<span class="req">必須</span></label>
-        <input type="text" id="kana" required />
+        <input type="text" id="kana" required placeholder="例：こうべ たろう" />
       </div>
 
       <div class="field">
@@ -104,36 +109,26 @@
         <input type="number" id="party_size" value="1" min="1" max="20" required />
       </div>
 
+      <p class="section-label">所属・連絡先など（任意）</p>
+
       <div class="field">
-        <label>ご連絡先<span class="req">必須</span><span class="opt">（リマインド用）</span></label>
-        <div class="contact-group">
-          <select id="contact_type">
-            <option value="phone">電話</option>
-            <option value="email">メール</option>
-          </select>
-          <input type="text" id="contact_value" inputmode="tel" placeholder="例：090-1234-5678" required />
-        </div>
+        <label>所属・団体名</label>
+        <input type="text" id="org" placeholder="会社名・団体名など" />
       </div>
 
       <div class="field">
-        <label>ご所属・団体名<span class="opt">任意</span></label>
-        <input type="text" id="org" />
+        <label>役職</label>
+        <input type="text" id="title" placeholder="例：代表・部長など" />
       </div>
 
       <div class="field">
-        <label>来場手段<span class="opt">任意</span></label>
-        <select id="transport">
-          <option value="">選択しない</option>
-          <option value="public">公共交通</option>
-          <option value="car">自家用車</option>
-        </select>
+        <label>電話番号<span class="opt">（任意）</span></label>
+        <input type="tel" id="contact" inputmode="tel" placeholder="例：090-1234-5678" />
       </div>
 
       <div class="field">
-        <label class="consent">
-          <input type="checkbox" id="consent" />
-          <span>ご記入の情報は、本セミナーの受付・連絡・当日案内、および主催コンソーシアムからの今後のセミナー・北区の交通に関する中立的な情報提供にのみ使用します。特定の政党・政治家の活動には利用しません。上記に同意します。</span>
-        </label>
+        <label>ご住所<span class="opt">（任意）</span></label>
+        <input type="text" id="address" autocomplete="street-address" placeholder="例：神戸市北区…" />
       </div>
 
       <button type="submit" id="submit">この内容で申し込む</button>
@@ -165,19 +160,6 @@
       }
     })();
 
-    // 連絡先の入力モードを電話/メールで切替
-    const ctype = document.getElementById("contact_type");
-    const cval = document.getElementById("contact_value");
-    ctype.addEventListener("change", () => {
-      if (ctype.value === "email") {
-        cval.setAttribute("inputmode", "email");
-        cval.placeholder = "例：example@mail.com";
-      } else {
-        cval.setAttribute("inputmode", "tel");
-        cval.placeholder = "例：090-1234-5678";
-      }
-    });
-
     const form = document.getElementById("form");
     const msg = document.getElementById("msg");
     const submitBtn = document.getElementById("submit");
@@ -189,10 +171,6 @@
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (!document.getElementById("consent").checked) {
-        showMsg("個人情報の利用目的への同意が必要です。", false);
-        return;
-      }
       submitBtn.disabled = true;
       submitBtn.textContent = "送信中…";
 
@@ -201,10 +179,10 @@
         name: document.getElementById("name").value.trim(),
         kana: document.getElementById("kana").value.trim(),
         party_size: parseInt(document.getElementById("party_size").value, 10) || 1,
-        contact_type: ctype.value,
-        contact_value: cval.value.trim(),
         org: document.getElementById("org").value.trim(),
-        transport: document.getElementById("transport").value,
+        title: document.getElementById("title").value.trim(),
+        contact: document.getElementById("contact").value.trim(),
+        address: document.getElementById("address").value.trim(),
         consent: true,
       };
 
@@ -233,3 +211,4 @@
   </script>
 </body>
 </html>
+  
